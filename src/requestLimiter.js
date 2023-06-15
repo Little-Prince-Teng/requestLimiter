@@ -2,20 +2,31 @@
 export class RequestLimiter {
 	constructor({
 		maxLimit = 5,
+		retryCount = 2,
 		requestApi
 	}) {
 		// 最大并发量
 		this.maxLimit = maxLimit
+		// 请求失败后可以重新retry的次数
+		this.retryCount = retryCount
 		// 请求队列，若当前请求并发量 > maxLimit，则将该请求加入到请求队列中
 		this.requestQueue = []
 		// 当前请求的并发量
 		this.currentCount = 0
 		// 使用用户定义的请求api
 		this.requestApi = requestApi
+		// 请求缓存
+		this.cache = new Map()
 	}
 
 	// 发起请求api
 	async request(...args) {
+		const cacheKey = JSON.stringify(...args)
+		// 检查缓存
+		if(this.cache.has(cacheKey)) {
+			return Promise.resolve(this.cache.get(cacheKey))
+		}
+
 		// 若当前请求数并发量超过最大并发量，则将其阻断在这里
 		// startBlocking会返回一个promise，并将该promise的resolve函数放在this.requestQueue队列里。这样的话，除非这个promise被resolve,否则不会继续向下执行。
 		// 当之前发出的请求结果回来/请求失败的时候，则将当前并发量-1，并且调用this.next函数执行队列中的请求
@@ -27,9 +38,17 @@ export class RequestLimiter {
 		try {
 			this.currentCount++
 			const result = await this.requestApi(...args)
+			// 缓存请求结果
+			this.cache.set(cacheKey, result)
 			return Promise.resolve(result)
 		} catch(error) {
-			return Promise.reject(error)
+			if(this.retryCount > 0) {
+				this.retryCount--
+				// 重试请求
+				this.request(...args, this.retryCount)
+			} else {
+				return Promise.reject(error)
+			}
 		} finally {
 			this.currentCount--
 			this.next()

@@ -10,6 +10,7 @@ async function requestDemo(num, time) {
 
 const limiter = new RequestLimiter({
 	maxLimit: 5,
+	retryCount: 2,
 	requestApi: requestDemo
 })
 
@@ -19,9 +20,10 @@ for(let i = 0; i < 30; i++) {
 	promises.push(
 		limiter.request(i, Math.random() * 3000)
 			.then(
-				result => console.log('result', result),
-				error => console.log(error)
-			)
+				result => console.log('result', result))
+			.catch(error => {
+				console.log(error)
+			})
 	)
 }
 
