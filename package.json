@@ -1,0 +1,14 @@
+{
+  "name": "request-limiter",
+  "version": "1.0.0",
+  "description": "批量请求限制并发数",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "author": "teng",
+  "license": "MIT",
+  "dependencies": {
+    "vite": "^4.0.0-alpha.2"
+  }
+}
